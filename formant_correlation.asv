@@ -30,53 +30,35 @@ for iSubject = 1:total_subjects
         stimuli_rep = praat_formants.data{iSubject, iDataset};
         time = stimuli_rep(:,1);
 
-        % Correct nan's using spline interpolation
+        participant_mean_length = round(mean(cellfun('length', praat_formants.data(iSubject,:))));
+
+
         for iFormant = 1:praat_data
+            
             col = stimuli_rep(:, iFormant);
+
+            % Correct nan's using spline interpolation
             col(isnan(col)) = interp1(find(~isnan(col)), col(~isnan(col)), find(isnan(col)),'spline');
             formants_interpl = [formants_interpl, col];
+
+
+            % Resample data using the mean participant length of reps
+            resampled_formant_col = resample3(formants_interpl, participant_mean_length); 
+            resampled_rep(:, iFormant) = resampled_formant_col'; 
+           
         end
 
         data_interpl{iSubject, iDataset} = formants_interpl;
         formants_interpl = [];
 
+        data_resampled{iSubject, iDataset} = resampled_rep;
+
     end
     save('data_interpl');
+    save('data_resampled');
 
 end % end of loop
 
-%% Resample Data to Fixed Length
-
-clc; clear
-filename = 'data_interpl';
-load(filename);
-
-[total_subjects, stimuli_reps] = size(data_interpl);
-
-number_cols = 4;
-
-for iParticipant = 1:total_subjects
-
-    participant_mean_length = round(mean(cellfun('length', data_interpl(iParticipant,:))));
-    resampled_rep = zeros(participant_mean_length, number_cols);
-
-    for iRep = 1:4
-
-        formant_data = data_interpl{1, iRep};
-        
-        % Resample data using the mean participant length of reps
-        for iFormant = 1:4
-            formant_col = formant_data(:, iFormant);
-            resampled_formant_col = resample3(formant_col, participant_mean_length); % resample3 by Dr. Alan Wisler
-            resampled_rep(:, iFormant) = resampled_formant_col';
-        end
-
-        data_resampled{iParticipant, iRep} = resampled_rep;
-
-    end
-    save('data_resampled'); 
-
-end % end of loop
 
 %% Cross-correlation analysis / Eigen value decomposition / SVD
 
@@ -90,11 +72,19 @@ load(filename);
 
 
 
-
-
-
 %% Data Visualization 
 
+participant = 1; 
+rep = 1; 
+formant = 2; 
+time_col = 1;
+
+x_time = praat_formants.data{participant, rep}(:, time_col);
+original_fo = praat_formants.data{participant, rep}(:, formant); 
+interpl_fo = data_interpl{participant, rep}(:, formant);
+
+plot(x_time, original_fo, '-' ...
+    x_time, interpl_fo, '.-',
 
 
 
